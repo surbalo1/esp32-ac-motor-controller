@@ -1,51 +1,117 @@
-# Control de Velocidad de Motor AC con Control de Ángulo de Fase
+# ESP32 AC Motor Speed Controller
 
-## Descripción
+Real-time AC motor speed control using phase-angle modulation with TRIAC and zero-crossing detection on ESP32.
 
-Este proyecto implementa un control de velocidad en tiempo real para un motor de corriente alterna (AC) utilizando una placa ESP32 y un circuito de potencia basado en un TRIAC. La velocidad del motor se regula ajustando el ángulo de disparo del TRIAC, el cual se recibe a través de comandos enviados por el puerto serie. Para sincronizar con precisión el pulso de disparo con la onda de AC, se utiliza un circuito de detección de cruce por cero.
+## Description
 
-## Características
+This project implements a real-time speed controller for AC motors using an ESP32 development board and a TRIAC-based power control circuit. Motor speed is regulated by adjusting the TRIAC firing angle, which is controlled via serial commands. A zero-crossing detector circuit ensures precise synchronization with the AC waveform for stable operation.
 
-*   **Ajuste de Velocidad en Tiempo Real:** Modifica la velocidad del motor enviando comandos a través del monitor serie.
-*   **Control de Ángulo de Fase:** Técnica digital para regular la potencia entregada al motor.
-*   **Detección de Cruce por Cero:** Sincronización precisa con la señal de AC para un control estable.
+## Features
 
-## Hardware Requerido
+- **Real-Time Speed Adjustment**: Modify motor speed by sending commands through the serial monitor
+- **Phase-Angle Control**: Digital technique for regulating power delivered to the motor
+- **Zero-Crossing Detection**: Precise synchronization with AC signal for stable control
+- **Serial Interface**: Easy control via UART commands (0-180 degrees)
 
-*   **Placa de Desarrollo ESP32**
-*   **Circuito de control de potencia con TRIAC**
-*   **Circuito de detección de cruce por cero** (conectado al pin `GPIO 17`)
-*   **Control de la compuerta (gate) del TRIAC** (conectado al pin `GPIO 16`)
+## Hardware Requirements
+
+- **ESP32 Development Board**
+- **TRIAC-based power control circuit**
+- **Zero-crossing detection circuit** (connected to GPIO 17)
+- **TRIAC gate control** (connected to GPIO 16)
+- **AC motor** (compatible with TRIAC control)
 
 ## Software
 
-*   **Plataforma:** Arduino IDE
-*   **Lenguaje:** C++ (para Arduino)
+- **Platform:** Arduino IDE / PlatformIO
+- **Language:** C++ (Arduino framework)
+- **Baud Rate:** 115200
 
-## Cómo Utilizarlo
+## Pin Configuration
 
-1.  **Montaje del Hardware:** Conecta el circuito de potencia del TRIAC y el detector de cruce por cero a la placa ESP32 como se especifica en la sección de pines.
-2.  **Cargar el Firmware:** Sube el código `ac_motor_control.ino` a tu placa ESP32 usando el Arduino IDE.
-3.  **Abrir el Monitor Serie:** Inicia la comunicación serie con una velocidad de `115200` baudios.
-4.  **Enviar Comandos:** Para controlar la velocidad del motor, envía un valor numérico entre `0` y `180` (que representa el ángulo de disparo en grados) seguido de un salto de línea.
-5.  **Observar el Resultado:** El motor ajustará su velocidad dinámicamente según el ángulo de disparo que hayas enviado.
+| Function | GPIO Pin |
+|----------|----------|
+| TRIAC Gate | 16 |
+| Zero-Crossing Input | 17 |
 
-## Detalles del Código
+## Installation
 
-El programa principal monitorea constantemente la señal del detector de cruce por cero. Cuando se detecta un cruce, calcula un retardo basado en el `firingAngle` (ángulo de disparo) y, transcurrido ese tiempo, envía un pulso corto a la compuerta del TRIAC para activarlo. Los comandos para actualizar el ángulo se reciben de forma asíncrona a través del puerto serie.
+1. **Hardware Assembly**: Connect the TRIAC power circuit and zero-crossing detector to the ESP32 as specified in the pin configuration
+2. **Load Firmware**: Upload `ac_motor_control.ino` to your ESP32 using Arduino IDE
+3. **Open Serial Monitor**: Start serial communication at 115200 baud
+4. **Send Commands**: Control motor speed by sending a numeric value between `0` and `180` (representing firing angle in degrees)
+5. **Observe Results**: Motor adjusts speed dynamically based on the firing angle
 
-## Configuración de Pines
+## Usage
 
-| Función                  | Pin (GPIO) |
-| ------------------------ | :--------: |
-| Compurta del TRIAC       |     16     |
-| Entrada de Cruce por Cero |     17     |
+### Serial Commands
 
-## Licencia
+Send a value between 0-180 followed by a newline:
 
-Este proyecto está licenciado bajo la Licencia MIT. Consulta el archivo `LICENSE` para más detalles.
+```
+0    # Minimum speed
+90   # Medium speed
+180  # Maximum speed
+```
 
-## Autores
+### Example Code Snippet
 
-*   Rafael Ignacio Gonzalez Chong
-*   Jaime Joel Olivas Muñoz
+```
+void loop() {
+  if (Serial.available() > 0) {
+    int angle = Serial.parseInt();
+    if (angle >= 0 && angle <= 180) {
+      firingAngle = angle;
+      Serial.print("Firing angle set to: ");
+      Serial.println(firingAngle);
+    }
+  }
+}
+```
+
+## How It Works
+
+The main program continuously monitors the zero-crossing detector signal. When a zero-crossing is detected, it calculates a delay based on the `firingAngle` and, after that time elapses, sends a short pulse to the TRIAC gate to activate it. Commands to update the angle are received asynchronously through the serial port.
+
+### Phase-Angle Control Principle
+
+1. Detect AC zero-crossing
+2. Wait for calculated delay (based on firing angle)
+3. Send trigger pulse to TRIAC gate
+4. TRIAC conducts for remainder of half-cycle
+5. Repeat for each AC cycle
+
+## Circuit Diagram
+
+```
+AC Line ──┬─── TRIAC ─── Motor
+          │
+          └─── Zero-Crossing Detector ──► GPIO 17
+                          │
+                     TRIAC Gate ◄──── GPIO 16 (ESP32)
+```
+
+## Safety Warning
+
+⚠️ **This project involves working with AC mains voltage. Only attempt if you have proper knowledge of electrical safety. Use proper isolation and protection circuits.**
+
+## Applications
+
+- Variable speed fans
+- Light dimmers
+- Pump speed control
+- Industrial motor controllers
+- Power tools
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Authors
+
+**Rafael Gonzalez**
+- GitHub: [@surbalo1](https://github.com/surbalo1)
+- LinkedIn: [Rafael Gonzalez](https://www.linkedin.com/in/rafael-glez-chong/)
+
+**Jaime Joel Olivas Muñoz**
+- Collaborator
