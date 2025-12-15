@@ -1,117 +1,272 @@
-# ESP32 AC Motor Speed Controller
+<div align="center">
 
-Real-time AC motor speed control using phase-angle modulation with TRIAC and zero-crossing detection on ESP32.
+# ⚡ ESP32 AC Motor Speed Controller
 
-## Description
+[![ESP32](https://img.shields.io/badge/ESP32-E7352C?style=for-the-badge&logo=espressif&logoColor=white)](https://www.espressif.com/)
+[![C++](https://img.shields.io/badge/C++-00599C?style=for-the-badge&logo=cplusplus&logoColor=white)](https://isocpp.org/)
+[![Arduino](https://img.shields.io/badge/Arduino-00979D?style=for-the-badge&logo=arduino&logoColor=white)](https://www.arduino.cc/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-This project implements a real-time speed controller for AC motors using an ESP32 development board and a TRIAC-based power control circuit. Motor speed is regulated by adjusting the TRIAC firing angle, which is controlled via serial commands. A zero-crossing detector circuit ensures precise synchronization with the AC waveform for stable operation.
+**Real-time AC motor speed control using phase-angle modulation with TRIAC and zero-crossing detection.**
 
-## Features
+*Digital power control • 60Hz AC synchronization • Serial interface • Industrial applications*
 
-- **Real-Time Speed Adjustment**: Modify motor speed by sending commands through the serial monitor
-- **Phase-Angle Control**: Digital technique for regulating power delivered to the motor
-- **Zero-Crossing Detection**: Precise synchronization with AC signal for stable control
-- **Serial Interface**: Easy control via UART commands (0-180 degrees)
+</div>
 
-## Hardware Requirements
+---
 
-- **ESP32 Development Board**
-- **TRIAC-based power control circuit**
-- **Zero-crossing detection circuit** (connected to GPIO 17)
-- **TRIAC gate control** (connected to GPIO 16)
-- **AC motor** (compatible with TRIAC control)
+## 📋 Overview
 
-## Software
+This project implements a **real-time speed controller for AC motors** using an ESP32 and a TRIAC-based power control circuit. Motor speed is regulated by adjusting the TRIAC firing angle (0-180°), synchronized with the AC waveform through zero-crossing detection for stable, flicker-free operation.
 
-- **Platform:** Arduino IDE / PlatformIO
-- **Language:** C++ (Arduino framework)
-- **Baud Rate:** 115200
+### 🎯 Key Features
 
-## Pin Configuration
+| Feature | Description |
+|---------|-------------|
+| **⚡ Phase-Angle Control** | Digital technique for precise power regulation |
+| **🔄 Zero-Crossing Detection** | Accurate synchronization with 60Hz AC signal |
+| **📡 Serial Interface** | Control via UART commands (0-180 degrees) |
+| **⏱️ Real-Time Response** | Immediate speed adjustment |
+| **🔧 Configurable** | Easy parameter adjustment in firmware |
 
-| Function | GPIO Pin |
-|----------|----------|
-| TRIAC Gate | 16 |
-| Zero-Crossing Input | 17 |
+---
 
-## Installation
+## 🏗️ System Architecture
 
-1. **Hardware Assembly**: Connect the TRIAC power circuit and zero-crossing detector to the ESP32 as specified in the pin configuration
-2. **Load Firmware**: Upload `ac_motor_control.ino` to your ESP32 using Arduino IDE
-3. **Open Serial Monitor**: Start serial communication at 115200 baud
-4. **Send Commands**: Control motor speed by sending a numeric value between `0` and `180` (representing firing angle in degrees)
-5. **Observe Results**: Motor adjusts speed dynamically based on the firing angle
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         AC MAINS (120V/60Hz)                    │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                    ┌───────────┴───────────┐
+                    │                       │
+              ┌─────▼─────┐          ┌──────▼──────┐
+              │   TRIAC   │          │ Zero-Cross  │
+              │  Circuit  │          │  Detector   │
+              └─────┬─────┘          └──────┬──────┘
+                    │                       │
+                    │   ┌───────────────────┘
+                    │   │
+              ┌─────▼───▼─────┐
+              │    ESP32      │
+              │  ┌─────────┐  │
+              │  │ GPIO 16 │◄─┼──── TRIAC Gate Control
+              │  │ GPIO 17 │◄─┼──── Zero-Cross Input
+              │  │   USB   │◄─┼──── Serial Commands (0-180)
+              │  └─────────┘  │
+              └───────────────┘
+                    │
+              ┌─────▼─────┐
+              │  AC MOTOR │
+              │  (Speed   │
+              │ Controlled)│
+              └───────────┘
+```
 
-## Usage
+---
+
+## 🔬 How It Works
+
+### Phase-Angle Control Principle
+
+```mermaid
+sequenceDiagram
+    participant AC as AC Waveform
+    participant ZC as Zero-Cross Detector
+    participant ESP as ESP32
+    participant TR as TRIAC
+    participant M as Motor
+
+    loop Every Half-Cycle (8.33ms @ 60Hz)
+        AC->>ZC: Voltage crosses zero
+        ZC->>ESP: Rising edge detected (GPIO 17)
+        ESP->>ESP: Calculate delay from firing angle
+        Note over ESP: delay = (angle × 8333.33) / 180 μs
+        ESP->>ESP: Wait for calculated delay
+        ESP->>TR: Trigger pulse (GPIO 16)
+        TR->>M: Conduct for remainder of half-cycle
+    end
+```
+
+### Firing Angle Examples
+
+| Angle | Delay (μs) | Power | Speed |
+|:-----:|:----------:|:-----:|:-----:|
+| **0°** | 0 | 100% | Maximum |
+| **45°** | ~2,083 | ~75% | High |
+| **90°** | ~4,167 | ~50% | Medium |
+| **135°** | ~6,250 | ~25% | Low |
+| **180°** | ~8,333 | ~0% | Minimum |
+
+---
+
+## 🛠️ Hardware Requirements
+
+### Components
+
+| Component | Description | GPIO |
+|-----------|-------------|:----:|
+| **ESP32** | Development board | - |
+| **TRIAC** | Power control (e.g., BT136) | - |
+| **Zero-Cross Detector** | Optocoupler circuit (e.g., 4N25) | 17 (Input) |
+| **TRIAC Driver** | Gate trigger circuit (e.g., MOC3021) | 16 (Output) |
+| **AC Motor** | Compatible with TRIAC control | - |
+
+### Pin Configuration
+
+```cpp
+const int TRIAC_GATE_PIN = 16;   // Output: TRIAC trigger
+const int ZERO_CROSS_PIN = 17;   // Input: Zero-crossing signal
+```
+
+### Circuit Schematic
+
+```
+                    ┌──────────────────────────────────────────┐
+                    │           AC POWER SECTION               │
+                    │                                          │
+    AC Line ────────┼────┬─────────[TRIAC]─────────── Motor   │
+         (Hot)      │    │            │                        │
+                    │    │         ┌──┴──┐                     │
+                    │    │         │GATE │                     │
+                    │    │         └──┬──┘                     │
+                    │    │            │                        │
+                    │    │      ┌─────┴─────┐                  │
+                    │    │      │ MOC3021   │◄── GPIO 16       │
+                    │    │      │ (Optoisolator)               │
+                    │    │      └───────────┘                  │
+                    │    │                                     │
+                    │    └───[4N25]───────────► GPIO 17        │
+                    │      (Zero-Cross                         │
+                    │       Detector)                          │
+                    └──────────────────────────────────────────┘
+```
+
+---
+
+## 💻 Software
+
+### Requirements
+
+| Tool | Version |
+|------|---------|
+| Arduino IDE | 1.8+ or 2.x |
+| ESP32 Board Package | Latest |
+| Serial Monitor | 115200 baud |
+
+### Installation
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/surbalo1/esp32-ac-motor-controller.git
+cd esp32-ac-motor-controller
+
+# 2. Open in Arduino IDE
+# File > Open > src/ac_motor_control.ino
+
+# 3. Select board: Tools > Board > ESP32 Dev Module
+
+# 4. Upload to ESP32
+
+# 5. Open Serial Monitor at 115200 baud
+```
+
+---
+
+## 🎮 Usage
 
 ### Serial Commands
 
-Send a value between 0-180 followed by a newline:
+Open Serial Monitor (115200 baud) and send angle values:
 
 ```
-0    # Minimum speed
-90   # Medium speed
-180  # Maximum speed
+0      → Minimum firing delay (Maximum speed/power)
+45     → 75% power
+90     → 50% power  
+135    → 25% power
+180    → Maximum firing delay (Minimum speed/power)
 ```
 
-### Example Code Snippet
+### Code Architecture
 
-```
+```cpp
 void loop() {
-  if (Serial.available() > 0) {
-    int angle = Serial.parseInt();
-    if (angle >= 0 && angle <= 180) {
-      firingAngle = angle;
-      Serial.print("Firing angle set to: ");
-      Serial.println(firingAngle);
-    }
+  // 1. Detect zero-crossing edge
+  int edge = detectEdge(ZERO_CROSS_PIN);
+
+  // 2. Process serial commands
+  if (isCommandReady) {
+    firingAngle = inputString.toInt();
+    delayBeforeFire = (firingAngle * 8333.33) / 180.0;
+  }
+
+  // 3. Fire TRIAC after calculated delay
+  if (edge == 1) {  // Rising edge = zero crossing
+    delayMicroseconds(delayBeforeFire);
+    digitalWrite(TRIAC_GATE_PIN, HIGH);
+    delayMicroseconds(PULSE_WIDTH_US);
+    digitalWrite(TRIAC_GATE_PIN, LOW);
   }
 }
 ```
 
-## How It Works
+---
 
-The main program continuously monitors the zero-crossing detector signal. When a zero-crossing is detected, it calculates a delay based on the `firingAngle` and, after that time elapses, sends a short pulse to the TRIAC gate to activate it. Commands to update the angle are received asynchronously through the serial port.
+## ⚠️ Safety Warning
 
-### Phase-Angle Control Principle
+> **🔴 DANGER: This project involves AC mains voltage (120V/240V)**
+> 
+> - Only attempt if you have proper knowledge of electrical safety
+> - Use proper galvanic isolation (optocouplers) between AC and DC sections
+> - Always disconnect power before making any modifications
+> - Use appropriate enclosures and insulation
+> - Consider adding fuses and circuit breakers
+> - **Never touch the circuit while powered!**
 
-1. Detect AC zero-crossing
-2. Wait for calculated delay (based on firing angle)
-3. Send trigger pulse to TRIAC gate
-4. TRIAC conducts for remainder of half-cycle
-5. Repeat for each AC cycle
+---
 
-## Circuit Diagram
+## 🏭 Applications
 
-```
-AC Line ──┬─── TRIAC ─── Motor
-          │
-          └─── Zero-Crossing Detector ──► GPIO 17
-                          │
-                     TRIAC Gate ◄──── GPIO 16 (ESP32)
-```
+- 💨 **Variable speed fans** - HVAC systems
+- 💡 **Light dimmers** - LED and incandescent
+- 🌊 **Pump speed control** - Water systems
+- 🏭 **Industrial motor controllers** - Conveyors
+- 🔧 **Power tools** - Variable speed drills
 
-## Safety Warning
+---
 
-⚠️ **This project involves working with AC mains voltage. Only attempt if you have proper knowledge of electrical safety. Use proper isolation and protection circuits.**
+## 📊 Technical Specifications
 
-## Applications
+| Parameter | Value |
+|-----------|-------|
+| **AC Frequency** | 60 Hz (configurable for 50 Hz) |
+| **Half-cycle period** | 8.333 ms |
+| **Firing angle range** | 0° - 180° |
+| **Trigger pulse width** | 1000 μs |
+| **Serial baud rate** | 115200 |
+| **Input voltage** | 120V AC (adjustable) |
 
-- Variable speed fans
-- Light dimmers
-- Pump speed control
-- Industrial motor controllers
-- Power tools
+---
 
-## License
+## 🤝 Authors
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+| Author | Role | Links |
+|--------|------|-------|
+| **Rafael González** | Lead Developer | [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github)](https://github.com/surbalo1) [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/rafael-glez-chong/) |
+| **Jaime Joel Olivas Muñoz** | Collaborator | - |
 
-## Authors
+---
 
-**Rafael Gonzalez**
-- GitHub: [@surbalo1](https://github.com/surbalo1)
-- LinkedIn: [Rafael Gonzalez](https://www.linkedin.com/in/rafael-glez-chong/)
+## 📄 License
 
-**Jaime Joel Olivas Muñoz**
-- Collaborator
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+<div align="center">
+
+**Built with ⚡ for power electronics enthusiasts**
+
+[![GitHub](https://img.shields.io/badge/Star_on_GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/surbalo1/esp32-ac-motor-controller)
+
+</div>
